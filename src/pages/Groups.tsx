@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Users, Trophy } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ChallengeBasicInfo from "@/components/challenges/create/ChallengeBasicInfo";
+import MetricConfig from "@/components/challenges/create/MetricConfig";
+import UpdateRequirements from "@/components/challenges/create/UpdateRequirements";
+import ChallengePreview from "@/components/challenges/create/ChallengePreview";
+import ShareOptions from "@/components/challenges/create/ShareOptions";
 
 interface GroupChallenge {
   id: string;
@@ -78,16 +83,67 @@ const mockChallenges: GroupChallenge[] = [
   },
 ];
 
+interface ChallengeFormData {
+  basicInfo: {
+    title: string;
+    description: string;
+    dateRange: {
+      from: Date;
+      to: Date;
+    };
+  };
+  metrics: {
+    metricType: string;
+    metricTarget: string;
+  };
+  requirements: {
+    requirePhoto: boolean;
+    requireComment: boolean;
+    requireMetric: boolean;
+  };
+}
+
 export default function Groups() {
-  const navigate = useNavigate();
   const [challenges] = useState<GroupChallenge[]>(mockChallenges);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState<ChallengeFormData>({
+    basicInfo: {
+      title: "",
+      description: "",
+      dateRange: {
+        from: new Date(),
+        to: new Date(new Date().setDate(new Date().getDate() + 30)),
+      },
+    },
+    metrics: {
+      metricType: "steps",
+      metricTarget: "900",
+    },
+    requirements: {
+      requirePhoto: true,
+      requireComment: false,
+      requireMetric: true,
+    },
+  });
+
+  const handleBasicInfoSubmit = (data: any) => {
+    setFormData((prev) => ({ ...prev, basicInfo: data }));
+  };
+
+  const handleMetricSubmit = (data: any) => {
+    setFormData((prev) => ({ ...prev, metrics: data }));
+  };
+
+  const handleRequirementsSubmit = (data: any) => {
+    setFormData((prev) => ({ ...prev, requirements: data }));
+  };
 
   return (
     <div className="container max-w-lg mx-auto p-4 mb-20">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Groups</h1>
         <Button
-          onClick={() => navigate("/create-challenge")}
+          onClick={() => setCreateDialogOpen(true)}
           className="lime-button rounded-lg"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -152,6 +208,38 @@ export default function Groups() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <div className="space-y-6">
+            <ChallengeBasicInfo
+              onSubmit={handleBasicInfoSubmit}
+              initialData={formData.basicInfo}
+            />
+
+            <MetricConfig
+              onSubmit={handleMetricSubmit}
+              initialData={formData.metrics}
+            />
+
+            <UpdateRequirements
+              onSubmit={handleRequirementsSubmit}
+              initialData={formData.requirements}
+            />
+
+            <ChallengePreview
+              title={formData.basicInfo.title}
+              description={formData.basicInfo.description}
+              dateRange={formData.basicInfo.dateRange}
+              metricType={formData.metrics.metricType}
+              metricTarget={formData.metrics.metricTarget}
+              requirements={formData.requirements}
+            />
+
+            <ShareOptions />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
