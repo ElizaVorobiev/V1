@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,61 +29,6 @@ interface GroupChallenge {
   daysLeft: number;
 }
 
-// Mock data - replace with real data
-const mockChallenges: GroupChallenge[] = [
-  {
-    id: "1",
-    title: "Morning Run Challenge",
-    description: "30 days of morning runs to kickstart your day!",
-    participants: [
-      {
-        name: "Sarah Chen",
-        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=SC",
-        initials: "SC",
-      },
-      {
-        name: "Mike Johnson",
-        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=MJ",
-        initials: "MJ",
-      },
-      {
-        name: "Alex Kim",
-        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=AK",
-        initials: "AK",
-      },
-    ],
-    progress: {
-      current: 750,
-      target: 900,
-      metric: "steps",
-    },
-    daysLeft: 12,
-  },
-  {
-    id: "2",
-    title: "Strength Training",
-    description: "Build strength together with daily workouts",
-    participants: [
-      {
-        name: "Sarah Chen",
-        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=SC",
-        initials: "SC",
-      },
-      {
-        name: "Mike Johnson",
-        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=MJ",
-        initials: "MJ",
-      },
-    ],
-    progress: {
-      current: 600,
-      target: 800,
-      metric: "calories",
-    },
-    daysLeft: 18,
-  },
-];
-
 interface ChallengeFormData {
   basicInfo: {
     title: string;
@@ -103,7 +49,57 @@ interface ChallengeFormData {
   };
 }
 
+const mockChallenges: GroupChallenge[] = [
+  {
+    id: "1",
+    title: "Morning Run Challenge",
+    description: "30 days of morning runs to kickstart your day!",
+    participants: [
+      {
+        name: "Sarah Chen",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=SC",
+        initials: "SC",
+      },
+      {
+        name: "Mike Johnson",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=MJ",
+        initials: "MJ",
+      },
+    ],
+    progress: {
+      current: 750,
+      target: 900,
+      metric: "steps",
+    },
+    daysLeft: 12,
+  },
+  {
+    id: "2",
+    title: "Strength Training",
+    description: "Build strength with daily workouts",
+    participants: [
+      {
+        name: "Alex Kim",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=AK",
+        initials: "AK",
+      },
+      {
+        name: "Emma Wilson",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=EW",
+        initials: "EW",
+      },
+    ],
+    progress: {
+      current: 600,
+      target: 800,
+      metric: "calories",
+    },
+    daysLeft: 15,
+  },
+];
+
 export default function Groups() {
+  const navigate = useNavigate();
   const [challenges] = useState<GroupChallenge[]>(mockChallenges);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState<ChallengeFormData>({
@@ -141,7 +137,7 @@ export default function Groups() {
   return (
     <div className="container max-w-lg mx-auto p-4 mb-20">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Groups</h1>
+        <h1 className="text-2xl font-bold">My Challenges</h1>
         <Button
           onClick={() => setCreateDialogOpen(true)}
           className="lime-button rounded-lg"
@@ -155,6 +151,7 @@ export default function Groups() {
         {challenges.map((challenge) => (
           <Card
             key={challenge.id}
+            onClick={() => navigate(`/challenge/${challenge.id}`)}
             className="p-4 space-y-4 rounded-xl card-shadow border-0 hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="flex items-start justify-between">

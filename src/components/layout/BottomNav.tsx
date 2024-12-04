@@ -13,7 +13,7 @@ export default function BottomNav() {
     { icon: Home, label: "Feed", path: "/" },
     { icon: PlusSquare, label: "Update", path: "/update" },
     { icon: SettingsIcon, label: "Settings", path: "/settings" },
-    { icon: Users, label: "My Groups", path: "/groups" },
+    { icon: Users, label: "My Challenges", path: "/groups" },
   ];
 
   return (
