@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,26 +12,102 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, X } from "lucide-react";
+import { Camera, X, Hand, ArrowRight } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Challenge {
   id: string;
   title: string;
   metric: string;
   target: number;
+  participants: {
+    id: string;
+    name: string;
+    avatar: string;
+    initials: string;
+    hasCompletedToday: boolean;
+  }[];
 }
 
 // Mock data - replace with real data
 const mockChallenges: Challenge[] = [
-  { id: "1", title: "Morning Run Challenge", metric: "steps", target: 10000 },
-  { id: "2", title: "Strength Training", metric: "calories", target: 500 },
+  {
+    id: "1",
+    title: "Morning Run Challenge",
+    metric: "steps",
+    target: 10000,
+    participants: [
+      {
+        id: "1",
+        name: "Sarah Chen",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=SC",
+        initials: "SC",
+        hasCompletedToday: true,
+      },
+      {
+        id: "2",
+        name: "Mike Johnson",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=MJ",
+        initials: "MJ",
+        hasCompletedToday: true,
+      },
+      {
+        id: "3",
+        name: "Alex Kim",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=AK",
+        initials: "AK",
+        hasCompletedToday: false,
+      },
+    ],
+  },
+  {
+    id: "2",
+    title: "Strength Training",
+    metric: "calories",
+    target: 500,
+    participants: [
+      {
+        id: "4",
+        name: "Emma Wilson",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=EW",
+        initials: "EW",
+        hasCompletedToday: true,
+      },
+      {
+        id: "5",
+        name: "David Lee",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=DL",
+        initials: "DL",
+        hasCompletedToday: false,
+      },
+    ],
+  },
 ];
 
 export default function UpdateProgress() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedChallenge, setSelectedChallenge] = useState<string>("");
   const [metricValue, setMetricValue] = useState<string>("");
   const [comment, setComment] = useState<string>("");
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [selectedParticipantsToNudge, setSelectedParticipantsToNudge] =
+    useState<Set<string>>(new Set());
+
+  const currentChallenge = mockChallenges.find(
+    (c) => c.id === selectedChallenge,
+  );
+  const incompleteParticipants =
+    currentChallenge?.participants.filter((p) => !p.hasCompletedToday) || [];
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,13 +122,52 @@ export default function UpdateProgress() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle submission logic here
+    if (!selectedChallenge || !metricValue || !photoPreview) {
+      toast({
+        variant: "destructive",
+        description: "Please fill in all required fields.",
+      });
+      return;
+    }
+
+    // Here you would normally send the update to your backend
     console.log({
       challengeId: selectedChallenge,
       metricValue,
       comment,
       hasPhoto: !!photoPreview,
     });
+
+    setShowSuccessDialog(true);
+  };
+
+  const toggleParticipantNudge = (participantId: string) => {
+    setSelectedParticipantsToNudge((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(participantId)) {
+        newSet.delete(participantId);
+      } else {
+        newSet.add(participantId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleNudgeAndFinish = () => {
+    if (selectedParticipantsToNudge.size > 0) {
+      const nudgedNames = incompleteParticipants
+        .filter((p) => selectedParticipantsToNudge.has(p.id))
+        .map((p) => p.name)
+        .join(", ");
+
+      toast({
+        title: "Nudges Sent!",
+        description: `You've nudged ${nudgedNames} to complete their challenge!`,
+      });
+    }
+
+    setShowSuccessDialog(false);
+    navigate("/");
   };
 
   return (
@@ -156,6 +272,79 @@ export default function UpdateProgress() {
           </Button>
         </Card>
       </form>
+
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Update Posted! 🎉</DialogTitle>
+            <DialogDescription className="pt-2">
+              Great job on completing your challenge! Would you like to nudge
+              others who haven't completed their challenge today?
+            </DialogDescription>
+          </DialogHeader>
+
+          {incompleteParticipants.length > 0 ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {incompleteParticipants.map((participant) => (
+                  <div
+                    key={participant.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                    onClick={() => toggleParticipantNudge(participant.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={participant.avatar} />
+                        <AvatarFallback>{participant.initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{participant.name}</span>
+                    </div>
+                    <Button
+                      variant={
+                        selectedParticipantsToNudge.has(participant.id)
+                          ? "secondary"
+                          : "outline"
+                      }
+                      size="sm"
+                      className="rounded-lg"
+                    >
+                      <Hand className="h-4 w-4 mr-2" />
+                      {selectedParticipantsToNudge.has(participant.id)
+                        ? "Selected"
+                        : "Select"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                className="w-full lime-button rounded-lg"
+                onClick={handleNudgeAndFinish}
+              >
+                {selectedParticipantsToNudge.size > 0 ? (
+                  <>
+                    <Hand className="h-4 w-4 mr-2" />
+                    Send Nudges & Finish
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Skip & Finish
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              className="w-full lime-button rounded-lg"
+              onClick={() => navigate("/")}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Continue
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
