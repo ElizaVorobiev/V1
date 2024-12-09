@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Pencil, UserPlus, Save } from "lucide-react";
+import { ArrowLeft, Users, Pencil, UserPlus, Save, Hand } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActivityFeed from "@/components/feed/ActivityFeed";
 import {
@@ -19,6 +19,7 @@ import ChallengeBasicInfo from "@/components/challenges/create/ChallengeBasicInf
 import MetricConfig from "@/components/challenges/create/MetricConfig";
 import UpdateRequirements from "@/components/challenges/create/UpdateRequirements";
 import ShareOptions from "@/components/challenges/create/ShareOptions";
+import NudgeDialog from "@/components/challenges/NudgeDialog";
 
 interface Challenge {
   id: string;
@@ -105,6 +106,7 @@ export default function ChallengeDetails() {
   const [challenge, setChallenge] = useState<Challenge>(mockChallenge);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [nudgeDialogOpen, setNudgeDialogOpen] = useState(false);
   const [editData, setEditData] = useState({
     basicInfo: null,
     metrics: null,
@@ -201,6 +203,18 @@ export default function ChallengeDetails() {
     setEditDialogOpen(false);
   };
 
+  const handleNudge = (participantId: string) => {
+    const participant = challenge.participants.find(
+      (p) => p.name === participantId,
+    );
+    if (participant) {
+      toast({
+        title: "Nudge Sent!",
+        description: `${participant.name} will be notified of your encouragement.`,
+      });
+    }
+  };
+
   return (
     <div className="container max-w-lg mx-auto p-4 mb-20">
       <div className="flex items-center justify-between mb-6">
@@ -220,14 +234,24 @@ export default function ChallengeDetails() {
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleEditDialogOpen}
-          className="rounded-full hover:bg-muted"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setNudgeDialogOpen(true)}
+            className="rounded-full hover:bg-muted"
+          >
+            <Hand className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleEditDialogOpen}
+            className="rounded-full hover:bg-muted"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 mb-6 space-y-4 rounded-xl card-shadow border-0">
@@ -379,6 +403,14 @@ export default function ChallengeDetails() {
           />
         </DialogContent>
       </Dialog>
+
+      <NudgeDialog
+        open={nudgeDialogOpen}
+        onOpenChange={setNudgeDialogOpen}
+        participants={sortedParticipants}
+        challengeTitle={challenge.title}
+        onNudge={handleNudge}
+      />
     </div>
   );
 }
