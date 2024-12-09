@@ -193,9 +193,9 @@ export default function ActivityFeed() {
   const renderNudge = (post: ActivityPost) => (
     <Card
       key={post.id}
-      className="p-4 space-y-4 hover:shadow-lg transition-shadow bg-gradient-to-r from-purple-50 to-indigo-50"
+      className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50"
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <Avatar>
             <AvatarImage src={post.user.avatar} />
@@ -214,10 +214,7 @@ export default function ActivityFeed() {
         </div>
         <span className="text-sm text-muted-foreground">{post.timestamp}</span>
       </div>
-      <p className="text-sm text-primary-foreground/80 italic">
-        "Don't fall behind! Your friends are making progress."
-      </p>
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2">
         <Button
           variant="outline"
           size="sm"

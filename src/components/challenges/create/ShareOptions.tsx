@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,10 +25,14 @@ const defaultProps: ShareOptionsProps = {
 
 export default function ShareOptions({
   challengeCode = defaultProps.challengeCode,
-  challengeLink = defaultProps.challengeLink,
   onShare = defaultProps.onShare,
 }: ShareOptionsProps) {
   const [copied, setCopied] = React.useState<"code" | "link" | null>(null);
+
+  const joinLink = useMemo(() => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/join?code=${challengeCode}`;
+  }, [challengeCode]);
 
   const handleCopy = async (text: string, type: "code" | "link") => {
     try {
@@ -84,7 +88,7 @@ export default function ShareOptions({
           <Label>Share Link</Label>
           <div className="flex gap-2">
             <Input
-              value={challengeLink}
+              value={joinLink}
               readOnly
               className="bg-muted text-sm rounded-lg border-2 focus:border-primary"
             />
@@ -94,7 +98,7 @@ export default function ShareOptions({
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => handleCopy(challengeLink, "link")}
+                    onClick={() => handleCopy(joinLink, "link")}
                     className="rounded-lg"
                   >
                     <Link className="h-4 w-4" />

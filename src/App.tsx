@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Feed from "./pages/Feed";
 import UpdateProgress from "./pages/UpdateProgress";
+import JoinChallenge from "./pages/JoinChallenge";
 import Settings from "./pages/Settings";
 import Groups from "./pages/Groups";
 import ChallengeDetails from "./pages/ChallengeDetails";
@@ -16,6 +17,7 @@ function App() {
           <Route path="/update" element={<UpdateProgress />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/join" element={<JoinChallenge />} />
           <Route path="/challenge/:id" element={<ChallengeDetails />} />
         </Routes>
         <BottomNav />
