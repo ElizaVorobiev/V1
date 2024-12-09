@@ -38,6 +38,15 @@ export default function MetricConfig({
     initialData.metricType || "steps",
   );
 
+  // Submit form data whenever any field changes
+  const handleChange = () => {
+    const formData = {
+      metricType,
+      metricTarget: register("metricTarget").value,
+    };
+    onSubmit(formData);
+  };
+
   return (
     <Card className="p-6 bg-white space-y-6 rounded-xl card-shadow border-0">
       <div className="space-y-2">
@@ -55,7 +64,10 @@ export default function MetricConfig({
             <Label>Metric Type</Label>
             <Select
               value={metricType}
-              onValueChange={(value) => setMetricType(value)}
+              onValueChange={(value) => {
+                setMetricType(value);
+                handleChange();
+              }}
             >
               <SelectTrigger className="rounded-lg border-2 focus:border-primary">
                 <SelectValue placeholder="Select metric type" />
@@ -76,6 +88,7 @@ export default function MetricConfig({
               type="number"
               placeholder="Enter target value"
               {...register("metricTarget")}
+              onChange={handleChange}
               className="w-full rounded-lg border-2 focus:border-primary"
             />
           </div>

@@ -4,6 +4,9 @@ import { Progress } from "@/components/ui/progress";
 import { Heart, MessageCircle, PlusCircle, Eye, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import CommentList, { Comment } from "./CommentList";
+import CommentInput from "./CommentInput";
 
 interface ActivityPost {
   id: string;
@@ -25,9 +28,34 @@ interface ActivityPost {
     image?: string;
   };
   likes?: number;
-  comments?: number;
+  isLiked?: boolean;
+  comments?: Comment[];
+  showComments?: boolean;
   timestamp: string;
 }
+
+const mockComments: Comment[] = [
+  {
+    id: "1",
+    user: {
+      name: "Emma Wilson",
+      avatar: "https://dummyimage.com/100/6366f1/ffffff&text=EW",
+      initials: "EW",
+    },
+    text: "Great progress! Keep it up! 💪",
+    timestamp: "1h ago",
+  },
+  {
+    id: "2",
+    user: {
+      name: "David Lee",
+      avatar: "https://dummyimage.com/100/6366f1/ffffff&text=DL",
+      initials: "DL",
+    },
+    text: "You're crushing it! 🔥",
+    timestamp: "30m ago",
+  },
+];
 
 const mockPosts: ActivityPost[] = [
   {
@@ -64,7 +92,9 @@ const mockPosts: ActivityPost[] = [
       image: "https://dummyimage.com/600x400/E8E4FF/6366f1&text=Morning+Run",
     },
     likes: 12,
-    comments: 3,
+    isLiked: false,
+    comments: mockComments,
+    showComments: false,
     timestamp: "2h ago",
   },
   {
@@ -87,13 +117,16 @@ const mockPosts: ActivityPost[] = [
       image: "https://dummyimage.com/600x400/E4FFF4/10B981&text=Workout",
     },
     likes: 8,
-    comments: 5,
+    isLiked: false,
+    comments: [],
+    showComments: false,
     timestamp: "4h ago",
   },
 ];
 
 export default function ActivityFeed() {
   const navigate = useNavigate();
+  const [posts, setPosts] = useState<ActivityPost[]>(mockPosts);
 
   const handleChallengeClick = (challengeId: string) => {
     navigate(`/challenge/${challengeId}`);
@@ -102,6 +135,59 @@ export default function ActivityFeed() {
   const handleUpdateClick = (challengeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/update?challenge=${challengeId}`);
+  };
+
+  const handleLike = (postId: string) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
+        if (post.id === postId && post.type === "update") {
+          const newLikeCount = post.isLiked
+            ? (post.likes || 1) - 1
+            : (post.likes || 0) + 1;
+          return {
+            ...post,
+            likes: newLikeCount,
+            isLiked: !post.isLiked,
+          };
+        }
+        return post;
+      }),
+    );
+  };
+
+  const toggleComments = (postId: string) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
+        if (post.id === postId) {
+          return { ...post, showComments: !post.showComments };
+        }
+        return post;
+      }),
+    );
+  };
+
+  const handleAddComment = (postId: string, text: string) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
+        if (post.id === postId) {
+          const newComment: Comment = {
+            id: Date.now().toString(),
+            user: {
+              name: "You",
+              avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
+              initials: "YOU",
+            },
+            text,
+            timestamp: "Just now",
+          };
+          return {
+            ...post,
+            comments: [...(post.comments || []), newComment],
+          };
+        }
+        return post;
+      }),
+    );
   };
 
   const renderNudge = (post: ActivityPost) => (
@@ -199,21 +285,42 @@ export default function ActivityFeed() {
       )}
 
       <div className="flex items-center justify-between pt-2 border-t">
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
-          <Heart className="h-4 w-4 mr-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`text-muted-foreground ${post.isLiked ? "text-primary hover:text-primary" : ""}`}
+          onClick={() => handleLike(post.id)}
+        >
+          <Heart
+            className={`h-4 w-4 mr-1 ${post.isLiked ? "fill-current" : ""}`}
+          />
           {post.likes}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`text-muted-foreground ${post.showComments ? "text-primary hover:text-primary" : ""}`}
+          onClick={() => toggleComments(post.id)}
+        >
           <MessageCircle className="h-4 w-4 mr-1" />
-          {post.comments}
+          {post.comments?.length || 0}
         </Button>
       </div>
+
+      {post.showComments && (
+        <div className="space-y-4 pt-2 border-t">
+          {post.comments && post.comments.length > 0 && (
+            <CommentList comments={post.comments} />
+          )}
+          <CommentInput onSubmit={(text) => handleAddComment(post.id, text)} />
+        </div>
+      )}
     </Card>
   );
 
   return (
     <div className="space-y-4 mb-20">
-      {mockPosts.map((post) =>
+      {posts.map((post) =>
         post.type === "nudge" ? renderNudge(post) : renderUpdate(post),
       )}
     </div>

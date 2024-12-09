@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Pencil, UserPlus } from "lucide-react";
+import { ArrowLeft, Users, Pencil, UserPlus, Save } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActivityFeed from "@/components/feed/ActivityFeed";
 import {
@@ -12,14 +12,43 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
 import ChallengeBasicInfo from "@/components/challenges/create/ChallengeBasicInfo";
 import MetricConfig from "@/components/challenges/create/MetricConfig";
 import UpdateRequirements from "@/components/challenges/create/UpdateRequirements";
 import ShareOptions from "@/components/challenges/create/ShareOptions";
 
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  participants: {
+    name: string;
+    avatar: string;
+    initials: string;
+    progress: {
+      current: number;
+      target: number;
+      metric: string;
+    };
+  }[];
+  progress: {
+    current: number;
+    target: number;
+    metric: string;
+  };
+  daysLeft: number;
+  requirements: {
+    requirePhoto: boolean;
+    requireComment: boolean;
+    requireMetric: boolean;
+  };
+}
+
 // Mock data - replace with real data fetching
-const mockChallenge = {
+const mockChallenge: Challenge = {
   id: "1",
   title: "Morning Run Challenge",
   description:
@@ -62,14 +91,47 @@ const mockChallenge = {
     metric: "steps",
   },
   daysLeft: 12,
+  requirements: {
+    requirePhoto: true,
+    requireComment: false,
+    requireMetric: true,
+  },
 };
 
 export default function ChallengeDetails() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { id } = useParams();
-  const [challenge] = useState(mockChallenge); // Replace with real data fetching
+  const [challenge, setChallenge] = useState<Challenge>(mockChallenge);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editData, setEditData] = useState({
+    basicInfo: null,
+    metrics: null,
+    requirements: null,
+  });
+
+  // Initialize edit data when dialog opens
+  const handleEditDialogOpen = () => {
+    setEditData({
+      basicInfo: {
+        title: challenge.title,
+        description: challenge.description,
+        dateRange: {
+          from: new Date(),
+          to: new Date(
+            new Date().setDate(new Date().getDate() + challenge.daysLeft),
+          ),
+        },
+      },
+      metrics: {
+        metricType: challenge.progress.metric,
+        metricTarget: challenge.progress.target.toString(),
+      },
+      requirements: challenge.requirements,
+    });
+    setEditDialogOpen(true);
+  };
 
   // Sort participants by progress percentage
   const sortedParticipants = [...challenge.participants].sort((a, b) => {
@@ -79,15 +141,64 @@ export default function ChallengeDetails() {
   });
 
   const handleBasicInfoSubmit = (data: any) => {
-    console.log("Basic info updated:", data);
+    setEditData((prev) => ({ ...prev, basicInfo: data }));
   };
 
   const handleMetricSubmit = (data: any) => {
-    console.log("Metrics updated:", data);
+    setEditData((prev) => ({ ...prev, metrics: data }));
   };
 
   const handleRequirementsSubmit = (data: any) => {
-    console.log("Requirements updated:", data);
+    setEditData((prev) => ({ ...prev, requirements: data }));
+  };
+
+  const handleSaveChanges = () => {
+    if (!editData.basicInfo || !editData.metrics || !editData.requirements) {
+      toast({
+        variant: "destructive",
+        description: "Please fill in all required fields before saving.",
+      });
+      return;
+    }
+
+    // Update challenge with all collected changes
+    setChallenge((prev) => {
+      const newTarget = parseInt(editData.metrics.metricTarget);
+      const updatedChallenge = {
+        ...prev,
+        title: editData.basicInfo.title,
+        description: editData.basicInfo.description,
+        daysLeft: Math.ceil(
+          (editData.basicInfo.dateRange.to.getTime() - new Date().getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
+        progress: {
+          ...prev.progress,
+          target: newTarget,
+          metric: editData.metrics.metricType,
+        },
+        requirements: editData.requirements,
+      };
+
+      // Update all participants' progress targets and metric type
+      updatedChallenge.participants = prev.participants.map((participant) => ({
+        ...participant,
+        progress: {
+          ...participant.progress,
+          target: newTarget,
+          metric: editData.metrics.metricType,
+        },
+      }));
+
+      return updatedChallenge;
+    });
+
+    toast({
+      title: "Challenge updated",
+      description: "All changes have been saved successfully.",
+    });
+
+    setEditDialogOpen(false);
   };
 
   return (
@@ -112,7 +223,7 @@ export default function ChallengeDetails() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setEditDialogOpen(true)}
+          onClick={handleEditDialogOpen}
           className="rounded-full hover:bg-muted"
         >
           <Pencil className="h-4 w-4" />
@@ -232,37 +343,28 @@ export default function ChallengeDetails() {
           <div className="space-y-6">
             <ChallengeBasicInfo
               onSubmit={handleBasicInfoSubmit}
-              initialData={{
-                title: challenge.title,
-                description: challenge.description,
-                dateRange: {
-                  from: new Date(),
-                  to: new Date(
-                    new Date().setDate(
-                      new Date().getDate() + challenge.daysLeft,
-                    ),
-                  ),
-                },
-              }}
+              initialData={editData.basicInfo || undefined}
             />
 
             <MetricConfig
               onSubmit={handleMetricSubmit}
-              initialData={{
-                metricType: challenge.progress.metric,
-                metricTarget: challenge.progress.target.toString(),
-              }}
+              initialData={editData.metrics || undefined}
             />
 
             <UpdateRequirements
               onSubmit={handleRequirementsSubmit}
-              initialData={{
-                requirePhoto: true,
-                requireComment: false,
-                requireMetric: true,
-              }}
+              initialData={editData.requirements || undefined}
             />
           </div>
+          <DialogFooter className="mt-6">
+            <Button
+              className="w-full lime-button rounded-lg"
+              onClick={handleSaveChanges}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

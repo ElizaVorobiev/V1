@@ -34,7 +34,7 @@ export default function ChallengeBasicInfo({
   onSubmit = () => {},
   initialData = defaultData,
 }: ChallengeBasicInfoProps) {
-  const { register, handleSubmit } = useForm<ChallengeBasicInfoData>({
+  const { register, getValues } = useForm<ChallengeBasicInfoData>({
     defaultValues: initialData,
   });
 
@@ -42,6 +42,27 @@ export default function ChallengeBasicInfo({
     from: initialData.dateRange?.from || new Date(),
     to: initialData.dateRange?.to || addDays(new Date(), 30),
   });
+
+  // Submit form data whenever any field changes
+  const handleChange = () => {
+    const formData = {
+      title: getValues("title"),
+      description: getValues("description"),
+      dateRange: date,
+    };
+    onSubmit(formData);
+  };
+
+  // Handle date range changes
+  const handleDateChange = (newDate: { from: Date; to: Date }) => {
+    setDate(newDate);
+    const formData = {
+      title: getValues("title"),
+      description: getValues("description"),
+      dateRange: newDate,
+    };
+    onSubmit(formData);
+  };
 
   return (
     <Card className="p-6 bg-white space-y-6 rounded-xl card-shadow border-0">
@@ -54,13 +75,14 @@ export default function ChallengeBasicInfo({
         </p>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="title">Challenge Title</Label>
           <Input
             id="title"
             placeholder="Enter challenge title"
             {...register("title")}
+            onChange={handleChange}
             className="w-full rounded-lg border-2 focus:border-primary"
           />
         </div>
@@ -71,13 +93,14 @@ export default function ChallengeBasicInfo({
             id="description"
             placeholder="Describe your challenge"
             {...register("description")}
+            onChange={handleChange}
             className="min-h-[100px] w-full rounded-lg border-2 focus:border-primary"
           />
         </div>
 
         <div className="space-y-2">
           <Label>Challenge Duration</Label>
-          <DatePickerWithRange date={date} onSelect={setDate} />
+          <DatePickerWithRange date={date} onSelect={handleDateChange} />
         </div>
       </form>
     </Card>
