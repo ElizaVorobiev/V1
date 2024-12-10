@@ -1,8 +1,16 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Heart, MessageCircle, PlusCircle, Eye, Hand } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  PlusCircle,
+  Eye,
+  Hand,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import CommentList, { Comment } from "./CommentList";
@@ -22,6 +30,8 @@ interface ActivityPost {
     progress?: number;
     target?: number;
     metric?: string;
+    hasUpdatedToday?: boolean;
+    todaysUpdate?: ActivityPost;
   };
   content?: {
     text?: string;
@@ -69,8 +79,50 @@ const mockPosts: ActivityPost[] = [
     challenge: {
       id: "1",
       title: "Morning Run Challenge",
+      hasUpdatedToday: true,
+      todaysUpdate: {
+        id: "1",
+        type: "update",
+        user: {
+          name: "You",
+          avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
+          initials: "YOU",
+        },
+        challenge: {
+          id: "1",
+          title: "Morning Run Challenge",
+          progress: 750,
+          target: 900,
+          metric: "steps",
+        },
+        content: {
+          text: "Early morning run! 🏃‍♀️ Feeling energized and ready for the day!",
+          image:
+            "https://dummyimage.com/600x400/E8E4FF/6366f1&text=Morning+Run",
+        },
+        likes: 12,
+        isLiked: false,
+        comments: mockComments,
+        showComments: false,
+        timestamp: "2h ago",
+      },
     },
     timestamp: "Just now",
+  },
+  {
+    id: "4",
+    type: "nudge",
+    user: {
+      name: "Emma Wilson",
+      avatar: "https://dummyimage.com/100/6366f1/ffffff&text=EW",
+      initials: "EW",
+    },
+    challenge: {
+      id: "2",
+      title: "Strength Training",
+      hasUpdatedToday: false,
+    },
+    timestamp: "5m ago",
   },
   {
     id: "1",
@@ -127,6 +179,7 @@ const mockPosts: ActivityPost[] = [
 export default function ActivityFeed() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<ActivityPost[]>(mockPosts);
+  const [expandedNudge, setExpandedNudge] = useState<string | null>(null);
 
   const handleChallengeClick = (challengeId: string) => {
     navigate(`/challenge/${challengeId}`);
@@ -190,55 +243,76 @@ export default function ActivityFeed() {
     );
   };
 
+  const toggleNudgeExpansion = (postId: string) => {
+    setExpandedNudge(expandedNudge === postId ? null : postId);
+  };
+
   const renderNudge = (post: ActivityPost) => (
-    <Card
-      key={post.id}
-      className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <Avatar>
-            <AvatarImage src={post.user.avatar} />
-            <AvatarFallback>{post.user.initials}</AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="flex items-center space-x-2">
-              <Hand className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">{post.user.name}</h3>
+    <div key={post.id} className="space-y-4">
+      <Card className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={post.user.avatar} />
+              <AvatarFallback>{post.user.initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center space-x-2">
+                <Hand className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">{post.user.name}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                nudged you about{" "}
+                <span className="font-medium">{post.challenge.title}</span>
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              nudged you about{" "}
-              <span className="font-medium">{post.challenge.title}</span>
-            </p>
           </div>
+          <span className="text-sm text-muted-foreground">
+            {post.timestamp}
+          </span>
         </div>
-        <span className="text-sm text-muted-foreground">{post.timestamp}</span>
-      </div>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={(e) => handleUpdateClick(post.challenge.id, e)}
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add Update
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full"
-          onClick={() => handleChallengeClick(post.challenge.id)}
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          View Challenge
-        </Button>
-      </div>
-    </Card>
+        <div className="flex gap-2">
+          {post.challenge.hasUpdatedToday ? (
+            <Badge
+              variant="secondary"
+              className="w-full justify-center py-2 cursor-pointer hover:bg-secondary/80"
+              onClick={() => toggleNudgeExpansion(post.id)}
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Updated Today
+            </Badge>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={(e) => handleUpdateClick(post.challenge.id, e)}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Update
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={() => handleChallengeClick(post.challenge.id)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Challenge
+          </Button>
+        </div>
+      </Card>
+      {expandedNudge === post.id && post.challenge.todaysUpdate && (
+        <Card className="p-4 space-y-4 ml-8 border-l-4 border-l-primary">
+          {renderUpdate(post.challenge.todaysUpdate)}
+        </Card>
+      )}
+    </div>
   );
 
   const renderUpdate = (post: ActivityPost) => (
-    <Card key={post.id} className="p-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           <Avatar>
@@ -312,13 +386,19 @@ export default function ActivityFeed() {
           <CommentInput onSubmit={(text) => handleAddComment(post.id, text)} />
         </div>
       )}
-    </Card>
+    </div>
   );
 
   return (
     <div className="space-y-4 mb-20">
       {posts.map((post) =>
-        post.type === "nudge" ? renderNudge(post) : renderUpdate(post),
+        post.type === "nudge" ? (
+          renderNudge(post)
+        ) : (
+          <Card key={post.id} className="p-4">
+            {renderUpdate(post)}
+          </Card>
+        ),
       )}
     </div>
   );
