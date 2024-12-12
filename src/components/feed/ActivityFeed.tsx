@@ -8,6 +8,7 @@ import {
   Eye,
   Hand,
   Check,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import CommentList, { Comment } from "./CommentList";
 import CommentInput from "./CommentInput";
 import { useSocket } from "@/lib/socket";
 import { useToast } from "@/components/ui/use-toast";
+import EditUpdateDialog from "./EditUpdateDialog";
 
 interface ActivityPost {
   id: string;
@@ -130,9 +132,9 @@ const mockPosts: ActivityPost[] = [
     id: "1",
     type: "update",
     user: {
-      name: "Sarah Chen",
-      avatar: "https://dummyimage.com/100/6366f1/ffffff&text=SC",
-      initials: "SC",
+      name: "You",
+      avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
+      initials: "YOU",
     },
     challenge: {
       id: "1",
@@ -184,6 +186,7 @@ export default function ActivityFeed() {
   const { toast } = useToast();
   const [posts, setPosts] = useState<ActivityPost[]>(mockPosts);
   const [expandedNudge, setExpandedNudge] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<ActivityPost | null>(null);
 
   useEffect(() => {
     // Listen for new posts
@@ -251,11 +254,22 @@ export default function ActivityFeed() {
       });
     });
 
+    // Listen for post updates
+    socket.on(
+      "post_updated",
+      ({ postId, update }: { postId: string; update: ActivityPost }) => {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) => (post.id === postId ? update : post)),
+        );
+      },
+    );
+
     return () => {
       socket.off("new_post");
       socket.off("post_liked");
       socket.off("new_comment");
       socket.off("new_nudge");
+      socket.off("post_updated");
     };
   }, [socket, toast]);
 
@@ -322,6 +336,43 @@ export default function ActivityFeed() {
         return post;
       }),
     );
+  };
+
+  const handleEditUpdate = (post: ActivityPost) => {
+    setEditingPost(post);
+  };
+
+  const handleSaveEdit = (data: {
+    text: string;
+    progress: number;
+    image: string;
+  }) => {
+    if (!editingPost) return;
+
+    const updatedPost: ActivityPost = {
+      ...editingPost,
+      content: {
+        text: data.text,
+        image: data.image,
+      },
+      challenge: {
+        ...editingPost.challenge,
+        progress: data.progress,
+      },
+    };
+
+    socket.emit("update_post", { postId: editingPost.id, update: updatedPost });
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === editingPost.id ? updatedPost : post,
+      ),
+    );
+    setEditingPost(null);
+
+    toast({
+      title: "Update Saved",
+      description: "Your changes have been saved successfully.",
+    });
   };
 
   const toggleNudgeExpansion = (postId: string) => {
@@ -407,7 +458,21 @@ export default function ActivityFeed() {
             </p>
           </div>
         </div>
-        <span className="text-sm text-muted-foreground">{post.timestamp}</span>
+        <div className="flex items-center gap-2">
+          {post.user.name === "You" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full hover:bg-muted"
+              onClick={() => handleEditUpdate(post)}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {post.timestamp}
+          </span>
+        </div>
       </div>
 
       {post.content?.text && <p className="text-sm">{post.content.text}</p>}
@@ -480,6 +545,14 @@ export default function ActivityFeed() {
             {renderUpdate(post)}
           </Card>
         ),
+      )}
+      {editingPost && (
+        <EditUpdateDialog
+          open={true}
+          onOpenChange={() => setEditingPost(null)}
+          update={editingPost}
+          onSave={handleSaveEdit}
+        />
       )}
     </div>
   );
