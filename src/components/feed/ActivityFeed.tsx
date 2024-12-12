@@ -12,9 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CommentList, { Comment } from "./CommentList";
 import CommentInput from "./CommentInput";
+import { useSocket } from "@/lib/socket";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ActivityPost {
   id: string;
@@ -178,8 +180,84 @@ const mockPosts: ActivityPost[] = [
 
 export default function ActivityFeed() {
   const navigate = useNavigate();
+  const socket = useSocket();
+  const { toast } = useToast();
   const [posts, setPosts] = useState<ActivityPost[]>(mockPosts);
   const [expandedNudge, setExpandedNudge] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Listen for new posts
+    socket.on("new_post", (newPost: ActivityPost) => {
+      setPosts((currentPosts) => [newPost, ...currentPosts]);
+      toast({
+        title: "New Update",
+        description: `${newPost.user.name} posted a new update`,
+      });
+    });
+
+    // Listen for new likes
+    socket.on(
+      "post_liked",
+      ({
+        postId,
+        likes,
+        likedBy,
+      }: {
+        postId: string;
+        likes: number;
+        likedBy: string;
+      }) => {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  likes,
+                  isLiked: likedBy === "You" ? true : post.isLiked,
+                }
+              : post,
+          ),
+        );
+      },
+    );
+
+    // Listen for new comments
+    socket.on(
+      "new_comment",
+      ({ postId, comment }: { postId: string; comment: Comment }) => {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) =>
+            post.id === postId
+              ? { ...post, comments: [...(post.comments || []), comment] }
+              : post,
+          ),
+        );
+
+        if (comment.user.name !== "You") {
+          toast({
+            title: "New Comment",
+            description: `${comment.user.name} commented on a post`,
+          });
+        }
+      },
+    );
+
+    // Listen for new nudges
+    socket.on("new_nudge", (nudge: ActivityPost) => {
+      setPosts((currentPosts) => [nudge, ...currentPosts]);
+      toast({
+        title: "New Nudge",
+        description: `${nudge.user.name} nudged you about ${nudge.challenge.title}`,
+      });
+    });
+
+    return () => {
+      socket.off("new_post");
+      socket.off("post_liked");
+      socket.off("new_comment");
+      socket.off("new_nudge");
+    };
+  }, [socket, toast]);
 
   const handleChallengeClick = (challengeId: string) => {
     navigate(`/challenge/${challengeId}`);
@@ -191,6 +269,7 @@ export default function ActivityFeed() {
   };
 
   const handleLike = (postId: string) => {
+    socket.emit("like_post", { postId });
     setPosts((currentPosts) =>
       currentPosts.map((post) => {
         if (post.id === postId && post.type === "update") {
@@ -220,19 +299,21 @@ export default function ActivityFeed() {
   };
 
   const handleAddComment = (postId: string, text: string) => {
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      user: {
+        name: "You",
+        avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
+        initials: "YOU",
+      },
+      text,
+      timestamp: "Just now",
+    };
+
+    socket.emit("add_comment", { postId, comment: newComment });
     setPosts((currentPosts) =>
       currentPosts.map((post) => {
         if (post.id === postId) {
-          const newComment: Comment = {
-            id: Date.now().toString(),
-            user: {
-              name: "You",
-              avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
-              initials: "YOU",
-            },
-            text,
-            timestamp: "Just now",
-          };
           return {
             ...post,
             comments: [...(post.comments || []), newComment],
@@ -275,7 +356,7 @@ export default function ActivityFeed() {
           {post.challenge.hasUpdatedToday ? (
             <Badge
               variant="secondary"
-              className="w-full justify-center py-2 cursor-pointer hover:bg-secondary/80"
+              className="w-full justify-center py-2 cursor-pointer hover:bg-muted/80 bg-muted text-muted-foreground"
               onClick={() => toggleNudgeExpansion(post.id)}
             >
               <Check className="h-4 w-4 mr-2" />
@@ -283,9 +364,9 @@ export default function ActivityFeed() {
             </Badge>
           ) : (
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
-              className="w-full"
+              className="w-full lime-button"
               onClick={(e) => handleUpdateClick(post.challenge.id, e)}
             >
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -293,7 +374,7 @@ export default function ActivityFeed() {
             </Button>
           )}
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             className="w-full"
             onClick={() => handleChallengeClick(post.challenge.id)}
