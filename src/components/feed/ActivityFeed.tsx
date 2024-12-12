@@ -8,7 +8,7 @@ import {
   Eye,
   Hand,
   Check,
-  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -466,7 +466,7 @@ export default function ActivityFeed() {
               className="rounded-full hover:bg-muted"
               onClick={() => handleEditUpdate(post)}
             >
-              <MoreVertical className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
           )}
           <span className="text-sm text-muted-foreground">
