@@ -21,11 +21,12 @@ interface GroupChallenge {
     avatar: string;
     initials: string;
   }[];
-  progress: {
-    current: number;
-    target: number;
-    metric: string;
-  };
+  startDate: Date;
+  endDate: Date;
+  completedDays: number;
+  totalDays: number;
+  metric: string;
+  target: number;
   daysLeft: number;
 }
 
@@ -66,11 +67,12 @@ const mockChallenges: GroupChallenge[] = [
         initials: "MJ",
       },
     ],
-    progress: {
-      current: 750,
-      target: 900,
-      metric: "steps",
-    },
+    startDate: new Date(2024, 0, 1),
+    endDate: new Date(2024, 0, 30),
+    completedDays: 18,
+    totalDays: 30,
+    metric: "steps",
+    target: 900,
     daysLeft: 12,
   },
   {
@@ -89,12 +91,13 @@ const mockChallenges: GroupChallenge[] = [
         initials: "EW",
       },
     ],
-    progress: {
-      current: 600,
-      target: 800,
-      metric: "calories",
-    },
-    daysLeft: 15,
+    startDate: new Date(2024, 0, 15),
+    endDate: new Date(2024, 1, 15),
+    completedDays: 5,
+    totalDays: 30,
+    metric: "calories",
+    target: 800,
+    daysLeft: 25,
   },
 ];
 
@@ -171,14 +174,11 @@ export default function Groups() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">
-                  {challenge.progress.current}/{challenge.progress.target}{" "}
-                  {challenge.progress.metric}
+                  {challenge.completedDays}/{challenge.totalDays} days completed
                 </span>
               </div>
               <Progress
-                value={
-                  (challenge.progress.current / challenge.progress.target) * 100
-                }
+                value={(challenge.completedDays / challenge.totalDays) * 100}
                 className="h-2"
               />
             </div>
