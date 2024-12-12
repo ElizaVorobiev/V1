@@ -9,6 +9,7 @@ import {
   Hand,
   Check,
   Pencil,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,19 @@ interface ActivityPost {
   isLiked?: boolean;
   comments?: Comment[];
   showComments?: boolean;
+  timestamp: string;
+}
+
+interface GroupedNudge {
+  challengeId: string;
+  challengeTitle: string;
+  hasUpdatedToday: boolean;
+  todaysUpdate?: ActivityPost;
+  users: Array<{
+    name: string;
+    avatar: string;
+    initials: string;
+  }>;
   timestamp: string;
 }
 
@@ -122,9 +136,35 @@ const mockPosts: ActivityPost[] = [
       initials: "EW",
     },
     challenge: {
-      id: "2",
-      title: "Strength Training",
-      hasUpdatedToday: false,
+      id: "1",
+      title: "Morning Run Challenge",
+      hasUpdatedToday: true,
+      todaysUpdate: {
+        id: "1",
+        type: "update",
+        user: {
+          name: "You",
+          avatar: "https://dummyimage.com/100/6366f1/ffffff&text=YOU",
+          initials: "YOU",
+        },
+        challenge: {
+          id: "1",
+          title: "Morning Run Challenge",
+          progress: 750,
+          target: 900,
+          metric: "steps",
+        },
+        content: {
+          text: "Early morning run! 🏃‍♀️ Feeling energized and ready for the day!",
+          image:
+            "https://dummyimage.com/600x400/E8E4FF/6366f1&text=Morning+Run",
+        },
+        likes: 12,
+        isLiked: false,
+        comments: mockComments,
+        showComments: false,
+        timestamp: "2h ago",
+      },
     },
     timestamp: "5m ago",
   },
@@ -187,6 +227,46 @@ export default function ActivityFeed() {
   const [posts, setPosts] = useState<ActivityPost[]>(mockPosts);
   const [expandedNudge, setExpandedNudge] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<ActivityPost | null>(null);
+
+  // Group nudges by challenge
+  const groupedPosts = posts.reduce<(ActivityPost | GroupedNudge)[]>(
+    (acc, post) => {
+      if (post.type === "update") {
+        acc.push(post);
+        return acc;
+      }
+
+      // Find existing grouped nudge for this challenge
+      const existingGroupIndex = acc.findIndex(
+        (p) => "challengeId" in p && p.challengeId === post.challenge.id,
+      );
+
+      if (existingGroupIndex === -1) {
+        // Create new grouped nudge
+        acc.push({
+          challengeId: post.challenge.id,
+          challengeTitle: post.challenge.title,
+          hasUpdatedToday: post.challenge.hasUpdatedToday || false,
+          todaysUpdate: post.challenge.todaysUpdate,
+          users: [post.user],
+          timestamp: post.timestamp,
+        });
+      } else {
+        // Add user to existing group
+        const group = acc[existingGroupIndex] as GroupedNudge;
+        if (!group.users.find((u) => u.name === post.user.name)) {
+          group.users.push(post.user);
+        }
+        // Update timestamp if more recent
+        if (post.timestamp === "Just now" || post.timestamp === "5m ago") {
+          group.timestamp = post.timestamp;
+        }
+      }
+
+      return acc;
+    },
+    [],
+  );
 
   useEffect(() => {
     // Listen for new posts
@@ -375,40 +455,56 @@ export default function ActivityFeed() {
     });
   };
 
-  const toggleNudgeExpansion = (postId: string) => {
-    setExpandedNudge(expandedNudge === postId ? null : postId);
+  const toggleNudgeExpansion = (challengeId: string) => {
+    setExpandedNudge(expandedNudge === challengeId ? null : challengeId);
   };
 
-  const renderNudge = (post: ActivityPost) => (
-    <div key={post.id} className="space-y-4">
+  const renderGroupedNudge = (group: GroupedNudge) => (
+    <div key={group.challengeId} className="space-y-4">
       <Card className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <Avatar>
-              <AvatarImage src={post.user.avatar} />
-              <AvatarFallback>{post.user.initials}</AvatarFallback>
-            </Avatar>
+            <div className="relative flex -space-x-2">
+              {group.users.slice(0, 3).map((user, index) => (
+                <Avatar
+                  key={user.name}
+                  className="border-2 border-background ring-0"
+                >
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback>{user.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+              {group.users.length > 3 && (
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-xs border-2 border-background">
+                  <Users className="h-4 w-4" />
+                </div>
+              )}
+            </div>
             <div>
               <div className="flex items-center space-x-2">
                 <Hand className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">{post.user.name}</h3>
+                <h3 className="font-semibold">
+                  {group.users.length > 1
+                    ? `${group.users.length} people nudged you`
+                    : `${group.users[0].name} nudged you`}
+                </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                nudged you about{" "}
-                <span className="font-medium">{post.challenge.title}</span>
+                about{" "}
+                <span className="font-medium">{group.challengeTitle}</span>
               </p>
             </div>
           </div>
           <span className="text-sm text-muted-foreground">
-            {post.timestamp}
+            {group.timestamp}
           </span>
         </div>
         <div className="flex gap-2">
-          {post.challenge.hasUpdatedToday ? (
+          {group.hasUpdatedToday ? (
             <Badge
               variant="secondary"
               className="w-full justify-center py-2 cursor-pointer hover:bg-muted/80 bg-muted text-muted-foreground"
-              onClick={() => toggleNudgeExpansion(post.id)}
+              onClick={() => toggleNudgeExpansion(group.challengeId)}
             >
               <Check className="h-4 w-4 mr-2" />
               Updated Today
@@ -418,7 +514,7 @@ export default function ActivityFeed() {
               variant="default"
               size="sm"
               className="w-full lime-button"
-              onClick={(e) => handleUpdateClick(post.challenge.id, e)}
+              onClick={(e) => handleUpdateClick(group.challengeId, e)}
             >
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Update
@@ -428,16 +524,16 @@ export default function ActivityFeed() {
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={() => handleChallengeClick(post.challenge.id)}
+            onClick={() => handleChallengeClick(group.challengeId)}
           >
             <Eye className="h-4 w-4 mr-2" />
             View Challenge
           </Button>
         </div>
       </Card>
-      {expandedNudge === post.id && post.challenge.todaysUpdate && (
+      {expandedNudge === group.challengeId && group.todaysUpdate && (
         <Card className="p-4 space-y-4 ml-8 border-l-4 border-l-primary">
-          {renderUpdate(post.challenge.todaysUpdate)}
+          {renderUpdate(group.todaysUpdate)}
         </Card>
       )}
     </div>
@@ -537,13 +633,13 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-4 mb-20">
-      {posts.map((post) =>
-        post.type === "nudge" ? (
-          renderNudge(post)
-        ) : (
+      {groupedPosts.map((post) =>
+        "type" in post ? (
           <Card key={post.id} className="p-4">
             {renderUpdate(post)}
           </Card>
+        ) : (
+          renderGroupedNudge(post)
         ),
       )}
       {editingPost && (
