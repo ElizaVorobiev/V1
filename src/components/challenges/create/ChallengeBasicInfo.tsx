@@ -77,7 +77,7 @@ export default function ChallengeBasicInfo({
 
         <div className="space-y-2">
           <Label>Challenge Duration</Label>
-          <DatePickerWithRange date={date} onSelect={setDate} />
+          <DatePickerWithRange onSelect={setDate} />
         </div>
       </form>
     </Card>
